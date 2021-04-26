@@ -1,6 +1,13 @@
 from BaffleClass import BaffleClass as BaffleClass
 from PSClass import PSClass as PSClass
+from FCClass import FCClass as FCClass
 import user_pickle
+import decimal 
+import datetime
+import time
+
+decimal.getcontext().prec = 6
+decimal.getcontext().traps[decimal.FloatOperation] = True
 
 
 ###########################################################
@@ -15,14 +22,41 @@ class ComponentsList:
     # list of index
     self.idx_list = range(0,len(comp_list))
     self.num = len(comp_list) 
+    self.buff_iter = 0
+    self.verbose = 0
 
   def return_cha_list(self):
     return self.comp_cha_list
 
-  def buffering(self):
+#   def buffering(self):
+#   # utilize thread from ThreadPoolExecutor
+#     self.buff_iter = self.buff_iter + 1
+# #    futures = []
+#     for comp in self.comp_list:
+#       # Baffle readouts and calculation of Barrierfunctions
+#       self.comp_cha_list[comp].buffering()
+# 
+#     if self.verbose == 1:
+#       print(self.comp_list[0] + ' buffering finished')
+#       print('Iteration number = ' + str(self.buff_iter))
+#     
+#     return 0
+
+  def buffering(self, executor):
+  # utilize thread from ThreadPoolExecutor
+    self.buff_iter = self.buff_iter + 1
+    futures = []
     for comp in self.comp_list:
       # Baffle readouts and calculation of Barrierfunctions
-      self.comp_cha_list[comp].buffering()
+      future =  self.comp_cha_list[comp].buffering_pool( executor )
+      futures.extend(future)
+
+    if self.verbose == 1:
+      print(self.comp_list[0] + ' buffering finished')
+      print('Iteration number = ' + str(self.buff_iter))
+    
+    return futures
+ 
 
 ###########################################################
 # Baffles list
@@ -56,7 +90,14 @@ class BafflesList(ComponentsList):
     for comp in self.comp_list:
       Bx = Bx + self.comp_cha_list[comp].Calc_CBF(cbf_mu, cbf_t)
     return Bx
-
+   
+  # create time list data
+  def write2df(self,df,row):
+    for comp in self.comp_list:
+      for i in self.comp_cha_list[comp].bf.keys():
+        df.loc[row, self.comp_cha_list[comp].bf[i].caname] =   self.comp_cha_list[comp].bf[i].fetch()
+    return df
+ 
 #####################################################################
 ## PS
 #####################################################################
@@ -95,5 +136,42 @@ class PSesList(ComponentsList):
   def apply_currents(self,esc_input_dict):
     for comp in self.comp_list:
       self.comp_cha_list[comp].apply_current(esc_input_dict[comp])
+   
+  # create time list data
+  def write2df(self,df,row):
+    for comp in self.comp_list:
+      df.loc[row, self.comp_cha_list[comp].aiCnv.caname]  =   self.comp_cha_list[comp].aiCnv.fetch() 
+      df.loc[row, self.comp_cha_list[comp].dacCnv.caname] =   self.comp_cha_list[comp].dacCnv.fetch()
+    return df
+ 
+
+#####################################################################
+## FC 
+#####################################################################
+class FCsList(ComponentsList):
+  def __init__(self, fc_list, T, delay = 0.1,  ave_times = 8, buff_mode = 'Average'):
+    # inherit ComponentList
+    super().__init__(fc_list)
 
 
+    for idx in self.idx_list:
+      self.comp_cha_list[fc_list[idx]] =   FCClass(fc_list[idx], T, delay, ave_times, buff_mode) # averaging it 8 times 
+
+  def Plot_FC_buffers(self, ax):
+    for comp in self.comp_list:
+      return self.comp_cha_list[comp].nACur.plot_buffer(ax)
+
+  def fetch(self):
+    for comp in self.comp_list:
+      return self.comp_cha_list[comp].nACur.fetch()
+
+  def show_caname(self):
+    for comp in self.comp_list:
+      return self.comp_cha_list[comp].nACur.show_caname()
+
+  # create time list data
+  def write2df(self,df,row):
+    for comp in self.comp_list:
+      df.loc[row, self.comp_cha_list[comp].nACur.caname] = self.comp_cha_list[comp].nACur.fetch()
+    return df
+ 

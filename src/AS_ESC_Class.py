@@ -47,6 +47,7 @@ class ES_Algorithm_Parent:
     
     # This keeps track of the history of all of the Normalized parameters being tuned
     self.pES_n = np.zeros([self.ES_steps+1,self.nES])
+    self.pES_n[:] = np.nan
     
     # Calculate the mean value of the initial condtions
     self.pES_n[0] = self.p_normalize(self.pES[0])
@@ -219,8 +220,11 @@ class ES_Algorithm_Parent:
       f_val = 0
       return f_val
  
+
+
 #########################################################################################
   #  design your own ES cost function
+  # Effect of Barrier function included
 #########################################################################################
 class ES_Algorithm( ES_Algorithm_Parent ):
 
@@ -247,6 +251,8 @@ class ES_Algorithm( ES_Algorithm_Parent ):
           if p_next[j] > 1.0:
               p_next[j] = 1.0
               
+      #  phase rotation due to evaluation functions
+      self.phase = self.kES*cES_now + self.Bx 
       # Return the next value
       return p_next
 
@@ -254,7 +260,7 @@ class ES_Algorithm( ES_Algorithm_Parent ):
     fig, ax11, ax2 = super(ES_Algorithm, self).Plot_normalized_params(fig) # super 
     ax12 = ax11.twinx()
     ln121 = ax12.plot(self.Bx_list, 'C1', label='$B(x)$ ')
-    ln112 = ax11.plot(np.multiply(self.kES, self.cES) + self.Bx_list, 'C2', label='$k_{{ES}} C_{{ES}} + B(x)$ ')
+    ln122 = ax12.plot(np.multiply(self.kES, self.cES) + self.Bx_list, 'C2', label='$k_{{ES}} C_{{ES}} + B(x)$ ')
  
     l1 = ax11.get_ylim()
     l2 = ax12.get_ylim()
@@ -273,7 +279,22 @@ class ES_Algorithm( ES_Algorithm_Parent ):
     plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left', frameon=False)
     plt.tight_layout()
 
-#    ax11set_ylabel('kES * ES cost, CBF cost')
+
+
+
+  # dump input values, esc amplitude, phase shift
+  def write2df(self, df,tstep):
+    # self.esc_input 
+    # self.damplitude
+    # self.Bx
+    # self.phase
+    df.loc[tstep,'Phase:k_ES*C+B'] = self.phase
+    df.loc[tstep,'Barrier:B(x)'] = self.Bx
+    for idx in range(self.nES):
+      df.loc[tstep,str('ESC_input'+ format(idx, '03'))] = self.pES[tstep, idx]
+    return df
+
+
 
 
 if __name__=='__main__':
@@ -313,3 +334,5 @@ if __name__=='__main__':
   es_class.Plot_absolute_params(fig2)
   fig1.savefig('./Image/ESC_NormalizedInput.png')
   fig2.savefig('./Image/ESC_AbsoluteInput.png')
+
+

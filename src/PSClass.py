@@ -6,7 +6,7 @@ from UserChannelAccess import UserChannelAccess as CHA
 ###################################################
 class CHA_PS_input(CHA):
 
-  def __init__(self, caname, diffmax, T=100):
+  def __init__(self, caname, diffmax, T=1000):
     super().__init__(caname,T)
     self.val_ulimit = self.val + abs(diffmax) # upper limit
     self.val_llimit = self.val - abs(diffmax) # lower limit
@@ -25,7 +25,7 @@ class CHA_PS_input(CHA):
 class PSClass():  # Store Channel Access class for each power supplier
 ###################################################################
 # Given a magnet name, this class automatically prepare functions for tuning magnets
-  def __init__(self, mgname, diffmax, mgtype='none',T=100):
+  def __init__(self, mgname, diffmax, mgtype='none',T=1000):
     print ('PSClass ' + mgname + ' initialized')
 
     self.mgname = mgname
@@ -75,11 +75,22 @@ class PSClass():  # Store Channel Access class for each power supplier
       print('Apply current in PS Class called, not implemented ' + self.mgname)
 
   def buffering(self):
-      self.aiCnv.buffering_KF()
-      self.dacCnv.buffering()
-
-  def buffering(self):
       self.aiCnv.buffering()
       self.dacCnv.buffering()
+      
+      return 0
+
+  def buffering_pool(self, executor):
+      futures = []
+      future = executor.submit( self.aiCnv.buffering )
+      futures.append( future )
+      future = executor.submit( self.dacCnv.buffering )
+      futures.append( future )
+      return futures
+    
+
+#   def buffering(self):
+#       self.aiCnv.buffering()
+#       self.dacCnv.buffering()
 
 

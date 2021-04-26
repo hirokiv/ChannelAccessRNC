@@ -1,4 +1,11 @@
 
+
+# Profile monitors
+  pf_list = [ 'PFb_U10a', 'PFb_U10b'] # , 'PFb_B12a', 'PFb_B12b']  #, 'PFb_B22', 'PFb_B31', 'PFb_B41', 'PFb_B50', 'PFb_B61', 'PFb_B71', 'PFb_C21a', 'PFb_S23', 'PFb_S31a', 'PFb_S31b', 'PFb_S41', 'PFb_S61', 'PFb_S64', 'PFb_S71', 'PFb_RRC_BM2', 'PFb_RRC_EBM', 'PFb_A01a', 'PFb_A02a', 'PFb_A02b', 'PFb_A1', 'PFb_A11b', 'PFb_D13', 'PFb_D14', 'PFb_D15', 'PFb_D16a', 'PFb_D16b', 'PFb_D17', 'PFb_D18', 'PFb_D50', 'PFb_5A1', 'PFb_5B1']
+#  pf_list = [ 'PFb_S64', 'PFb_S71', 'PFb_RRC_BM2', 'PFb_RRC_EBM', 'PFb_A01a']
+#  main_profile(pf_list)
+
+
 ################################################### 
 ## profile monitor inherit parent channel class 
 ################################################### 
