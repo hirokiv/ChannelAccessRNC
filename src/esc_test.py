@@ -2,7 +2,13 @@
 import warnings
 import datetime
 warnings.simplefilter("ignore",UserWarning)
+import matplotlib
+matplotlib.use('TkAgg')  # Or any other X11 back-end
 import matplotlib.pyplot as plt
+#matplotlib.use('GTK3Agg')  # Or any other X11 back-end
+# 'Qt4Agg', 'Qt4Cairo', 'Qt5Agg', 'Qt5Cairo',
+#matplotlib.use('TkCairo')
+
 from concurrent.futures import ThreadPoolExecutor
 #from concurrent.futures import ProcessPoolExecutor
 import numpy as np
@@ -54,7 +60,7 @@ class ES_Algorithm_User(ES_Algorithm):
       # f_val = (np.linalg.norm(p, ord=2)-1)**2
 #      f_val = 0
 #      f_val = (15200.0 - observation )**2
-      f_val = (15000.0 - observation )
+      f_val = (20000.0 - observation )
 #      if (observation < 13500.0): 
 #        print('Process terminated automatically')
 #        print('Observation value reached lower limit')
@@ -105,7 +111,7 @@ def df_dump_to_files(df, filename):
   starttime = time.time()
 
 #  output_dir = 'RW_Data'
-  csv_wfilename = 'RW_Data/history_csv' + filename + '.csv'
+  csv_wfilename = 'RW_Data/history_csv_' + filename + '.csv'
   df.to_csv(csv_wfilename, float_format='%.6e')
 
   pickle_wfilename = 'RW_Data/history_pickle_'  + filename + '.pickle'
@@ -121,6 +127,24 @@ def df_dump_to_files(df, filename):
 
 
 
+def save_script_myself(filename):
+  # importing the modules
+  import os
+  import shutil
+  
+  # getting the current working directory
+  src_dir = os.getcwd()
+  src_dir = src_dir + '/RW_Data'
+  
+  # printing current directory
+  print(src_dir) 
+  
+  # copying the files
+  shutil.copyfile('esc_test.py', 'RW_Data/esc_test_history_' + filename + '.py') #copy src to dst
+  
+  # printing the list of new files
+  # print(os.listdir(src_dir)) 
+
 
 ###############################################################
 ## main function
@@ -133,18 +157,21 @@ if __name__ == '__main__':
 ###############################################################
   # Generate baffle classs
 
-  # specify baffles to be processed
-  baffle_course = 'BF_RRC_REDUCED'
+  COURSE = 'AVF_Shootout'
 
-#  baffle_course = '28G_TEST'
-  # Generate power supply classs
-  PS_course = 'PS_RRC_REDUCED'
+  if COURSE=='RRC' : 
+    baffle_course = 'BF_RRC_REDUCED'
+  #  baffle_course = '28G_TEST'
+  #  PS_course = 'PS_RRC_MORE_REDUCED'
+    PS_course = 'PS_RRC_REDUCED'
+  #  FC_course = '28G_TEST'
+    FC_course = 'FCh_A02a'
+  #  FC_course = 'FCs_A11b'
 
-  # FC course
-#  FC_course = '28G_TEST'
-#  FC_course = 'FCh_A02a'
-  FC_course = 'FCs_A11b'
-
+  elif COURSE=='AVF_Shootout':
+    baffle_course = 'BF_AVF_Shoot'
+    PS_course =     'PS_AVF_Shoot'
+    FC_course = 'FC_AVF_Shoot'
 
 
   ###################
@@ -155,21 +182,27 @@ if __name__ == '__main__':
   # reduced model
   elif baffle_course == 'BF_RRC_REDUCED':
     bf_list = ['BF_R_MIC2e', 'BF_R_MIC1e', 'BF_R_MDC1e', 'BF_R_MDC2e']
+    ### allowable current for each baffles in nA
+    # or determins slope of baffles in linear CBF case
+    bf_curr_lim_list = [5.0]*len(bf_list)
+    ### generate baffles class instance
+    CBFTYPE = ['Linear']*len(bf_list)
+    bafflesList = BafflesList(bf_list, bf_curr_lim_list, CBFTYPE)
   elif baffle_course == '28G_TEST':
     bf_list = ['SL_U10']
+  elif baffle_course == 'BF_AVF_Shoot':
+    bf_list = ['SL_C01a','BF_C03']
+    bf_curr_lim_list = [0.0, 100.0]
+    ### generate baffles class instance
+    CBFTYPE = ['Linear', 'AbsLinear']
+    bafflesList = BafflesList(bf_list, bf_curr_lim_list, CBFTYPE)
 
-
-  ### allowable current for each baffles in nA
-  # or determins slope of baffles in linear CBF case
-  bf_curr_lim_list = [200.0]*len(bf_list)
-  ### generate baffles class instance
-  bafflesList = BafflesList(bf_list, bf_curr_lim_list)
 
   ###################
   ### 2. all PSes
   ###################
   if PS_course == 'PS_RRC_ALL':
-#    ps_list = ['A_Q19'] #, 'A_Q20', 'A_Q21', 'A_Q22']
+  #    ps_list = ['A_Q19'] #, 'A_Q20', 'A_Q21', 'A_Q22']
     ps_list = ['A_ST21', 'A_ST22', 'A_ST23', 'A_ST24', 'A_Q30', 'A_Q31', 'A_Q32']
     # MIC2 requires 5 A precision,  seems unpredictable. Eliminate from the list
     # Steerer should be around or less than 0.5 A
@@ -180,21 +213,47 @@ if __name__ == '__main__':
  
   # reduced model
   elif PS_course == 'PS_RRC_REDUCED':
-#    ps_list = [ 'A_Q30', 'A_Q31', 'A_Q32']
     ps_list = ['A_ST21', 'A_ST22', 'A_ST23', 'A_ST24', 'A_Q30', 'A_Q31', 'A_Q32']
-#    ps_list = ['A_ST24', 'A_Q30', 'A_Q31', 'A_Q32', 'A_ST26', 'BM2', 'BM1_1', 'BM1_2', 'MIC2', 'MIC1']
+    #    ps_list = ['A_ST24', 'A_Q30', 'A_Q31', 'A_Q32', 'A_ST26', 'BM2', 'BM1_1', 'BM1_2', 'MIC2', 'MIC1']
 
-  # limit applyable input difference from the initial input 
-    ps_allowable_diff_list = [ 0.02]*len(ps_list)
-
-  # power supplier type {dim, ndim, etc}, 
+    # limit applyable input difference from the initial input 
+    ps_allowable_diff_list = [ 2.0]*4
+    ps_allowable_diff_list.extend( [ 30.0]*3 )
+    # power supplier type {dim, ndim, etc}, 
     # currently only dim & ndim type is defined in PSesClass.py
     pstype_list = ['dim']*len(ps_list)
     pstype_list.extend(['ndim'])
     pstype_list.extend(['dim']*4)
 
+  # more reduced model
+  elif PS_course == 'PS_RRC_MORE_REDUCED':
+    ps_list = [ 'A_Q30', 'A_Q31', 'A_Q32']
+
+    # limit applyable input difference from the initial input 
+    #    ps_allowable_diff_list = [ 0.01]*4
+    ps_allowable_diff_list = [ 30.0]*len(ps_list)
+    # power supplier type {dim, ndim, etc}, 
+    # currently only dim & ndim type is defined in PSesClass.py
+    pstype_list = ['dim']*len(ps_list)
+    #    pstype_list.extend(['ndim'])
+    #    pstype_list.extend(['dim']*4)
+
+  # AVF shooting course
+  elif PS_course == 'PS_AVF_Shoot':
+   # power supplier type {dim, ndim, etc}, 
+#    ps_list = ['AVF_S1','AVF_Q1','AVF_Q2','AVF_Q3','AVF_S3','AVF_S4','AVF_Q4','AVF_Q5']
+#    # limit applyable input difference from the initial input 
+#    ps_allowable_diff_list = [0.1, 1.0, 1.0, 1.0, 0.1, 0.1, 1.0, 1.0]
+    ##### Omit S1 as it doesn't respond well
+    ps_list = ['AVF_Q1','AVF_Q2','AVF_Q3','AVF_S3','AVF_S4','AVF_Q4','AVF_Q5']
+    # limit applyable input difference from the initial input 
+    ps_allowable_diff_list = [ 0.2, 0.2, 0.5, 1.0, 0.5, 1.0, 1.0]
+  
+    pstype_list = ['dim']*len(ps_list)
+
   psesList = PSesList(ps_list, ps_allowable_diff_list, pstype_list)
   esc_input_dict = psesList.return_esc_input_list()
+  esc_input_dict0 = esc_input_dict
 
 
   ###################
@@ -206,8 +265,10 @@ if __name__ == '__main__':
     fc_list = ['FCh_A02a']
   elif FC_course == 'FCs_A11b':
     fc_list = ['FCs_A11b']
+  elif FC_course == 'FC_AVF_Shoot':
+    fc_list = ['FC_C03']
 
-  fc1 =  FCsList(fc_list, T = 1000, delay=0.1, ave_times = 8, buff_mode = 'Average') # averaging it 8 times
+  fc1 =  FCsList(fc_list, T = 1000, delay=0.1, ave_times = 4, buff_mode = 'Average') # averaging it 4 times
   # Kalman filter configuration 
 #  sigv2 = 20 # nA faraday cup sensitivity corresponds to R
 #  sigw2 = 40 # nA observation noise corresponds to Q
@@ -221,7 +282,8 @@ if __name__ == '__main__':
 ###############################################################
   cbf_mu_init = 1 # barrier function gain C' = kC + muB
 #  cbf_mu_end = 1 # barrier function gain C' = kC + muB
-  cbf_t = 10.0 # slope of barrier function
+  cbf_t = 200.0 # slope of barrier function
+#  cbf_t = 10.0 # slope of barrier function
   cbf_mu = cbf_mu_init
 #  cbf_mu_list = np.linspace(cbf_mu_init, cbf_mu_end, ES_steps)
 #  cbf_mu0 = cbf_mu_list[0]
@@ -265,7 +327,7 @@ if __name__ == '__main__':
   if SaveInputStatus == 'yes':
     print('save called')
     psesList.save_init_ESC_input(dt_now)
-
+  
 
   print('\n############################################')
   print('Selected time step is ' + str(ES_steps))
@@ -276,25 +338,16 @@ if __name__ == '__main__':
   while StartESCOperation != 'yes':
     StartESCOperation = input("Please recheck the machine state : ''yes'' and begin \n\n " )
  
+  ######################################################################
+  # make a copy of this file for the later reference
+  ######################################################################
+  save_script_myself(init_time_str)
 
-###############################################################
-## Make buffers for storing parameters
-###############################################################
- 
-   # Pandad data frame 
-   #  ES_steps = 500
-   # time, [mgvalues], [BFs], [FCs], evalf, evalB 
-#
-#  time_history = np.zeros(ES_steps, 1)
-#  mgvalues_history = np.zeros(ES_steps, psesList.num*2)
-#  baffle_history   = np.zeros(ES_steps, bafflesList.num*4*2)
-#  fc_history       = np.zeros(ES_steps, 2)
-#  evalf_history    = np.zeros(ES_steps, 1)
-#  evalB_history    = np.zeros(ES_steps, 1)
-#  
 
+  ######################################################################
   ## initialize executor
-  # Please limit the number of max_workers to be 4
+  ######################################################################
+  # Please limit the number of max_workers to be 16
   executor = ThreadPoolExecutor(max_workers=8)
   
 
@@ -307,7 +360,7 @@ if __name__ == '__main__':
     futures = []
     for kind in [ fc1, psesList, bafflesList]:
       # fc1 should come first as it averages out the signal
-      comp_future =  kind.buffering( executor )
+      comp_future =  kind.buffering_pool( executor )
       futures += comp_future[:]
     return futures
 
@@ -322,6 +375,7 @@ if __name__ == '__main__':
       global t_list, bafflesList, psesList, es_class, fc1
 
       # Clear all plots
+      plt.close()
 
       ## 1.plot all the value of baffles
       fig1 = plt.figure(1,figsize=(15,15))
@@ -338,7 +392,7 @@ if __name__ == '__main__':
       plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left', frameon=False)
       plt.tight_layout()
       fig1.savefig('../Image/esc_test_' + 'Buffer'+init_time_str+'.png')
-      plt.close()
+#      plt.close()
 
       ## 3. Plot normalized ESC input parameters and cost functions
       fig3 = plt.figure(2,figsize=(15,15))
@@ -347,7 +401,7 @@ if __name__ == '__main__':
    #   plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
       plt.tight_layout()
       fig3.savefig('../Image/esc_test_ESC_NormalizedInput'+init_time_str+'.png')
-      plt.close()
+#      plt.close()
 
 #      ## 4. Plot absolute ESC input parameters
 #      fig4 = plt.figure(3,figsize=(10,15))
@@ -362,16 +416,16 @@ if __name__ == '__main__':
       plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left', frameon=False)
       plt.tight_layout()
       fig5.savefig('../Image/esc_test_PSoutput'+init_time_str+'.png')
-      plt.close()
+#      plt.close()
     
       ## 6. Plot FC values
       fig6, ax6 = plt.subplots(1,1,figsize=(15,10))
       fc1.Plot_FC_buffers(ax6)
       fig6.savefig('../Image/esc_test_FC'+fc1.show_caname()+'_'+init_time_str+'.png')
 
+      plt.show()
 
 
-      plt.close()
  
   ######################################################################
 
@@ -394,7 +448,9 @@ if __name__ == '__main__':
   # initialize sleep_sec variable
   sleep_sec = 0
 
-
+  ###############################################################
+  ## Make buffer dataframe for storing parameters
+  ###############################################################
   # Prepare dataframe for fileoutput
   df = initialize_data_frame(ES_steps)
 
@@ -440,8 +496,8 @@ if __name__ == '__main__':
     esc_input = es_class.ES_main_loop(tstep, fc1.fetch())
 
     # convert array into dict 
+   
     esc_input_dict = {key: val for key, val in zip(esc_input_dict.keys(), esc_input)}
- 
 
     ####################################################################
     # in the following df writer, df is defined as GLOBAL function
@@ -451,10 +507,11 @@ if __name__ == '__main__':
     ######### ######### ######### ######### #########
     # apply esc values for each PS
     ######### ######### ######### ######### #########
-#   executor.submit(  psesList.apply_currents(esc_input_dict) )
+    psesList.apply_currents_pool(esc_input_dict, executor) 
+#    psesList.apply_currents_sequential(esc_input_dict0, executor, tstep) 
     ######### when testing apply function, consider taking ES_step to be 1 #########
 
-    if tstep == ES_steps: 
+    if tstep == (ES_steps-1): 
       break
     # Calculate the elapsed time
     current_time_list[tstep+1] = time.time()

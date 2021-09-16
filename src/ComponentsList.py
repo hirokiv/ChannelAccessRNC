@@ -42,7 +42,7 @@ class ComponentsList:
 #     
 #     return 0
 
-  def buffering(self, executor):
+  def buffering_pool(self, executor):
   # utilize thread from ThreadPoolExecutor
     self.buff_iter = self.buff_iter + 1
     futures = []
@@ -63,7 +63,7 @@ class ComponentsList:
 ###########################################################
 class BafflesList(ComponentsList):
 # Generate baffle classes for control output
-  def __init__(self, bf_list, bf_curr_lim_list):
+  def __init__(self, bf_list, bf_curr_lim_list, CBFTYPE=['Linear']):
 
     # inherit ComponentList
     super().__init__(bf_list,)
@@ -77,7 +77,8 @@ class BafflesList(ComponentsList):
 
     # initialize baffle classes
     for idx in self.idx_list:
-      self.comp_cha_list[bf_list[idx]] =  BaffleClass(bf_list[idx],bf_curr_lim_list[idx])
+      self.comp_cha_list[bf_list[idx]] =  BaffleClass(bf_list[idx],bf_curr_lim_list[idx], CBFTYPE[idx])
+#      print(CBFTYPE)
 
   # visualize baffle values
   def Plot_buffers(self,ax):
@@ -109,6 +110,7 @@ class PSesList(ComponentsList):
    # Generate power supply classes for control input
     self.init_esc_input_list = {} # store power supply classes
     self.pstype_list = pstype_list
+    self.ps_allowable_diff_list = ps_allowable_diff_list
 
     for idx in self.idx_list:
       self.comp_cha_list[ps_list[idx]] =  PSClass(ps_list[idx], ps_allowable_diff_list[idx], pstype_list[idx])
@@ -136,7 +138,27 @@ class PSesList(ComponentsList):
   def apply_currents(self,esc_input_dict):
     for comp in self.comp_list:
       self.comp_cha_list[comp].apply_current(esc_input_dict[comp])
+
+  def apply_currents_pool(self, esc_input_dict, executor):
+    for comp in self.comp_list:
+      executor.submit( self.comp_cha_list[comp].apply_current(esc_input_dict[comp]) )
    
+  def apply_currents_sequential(self, esc_input_dict0, executor, step):
+    # step is the current step number
+    # apply input current one by one to compute dC/dp for each
+    # step repeated every
+    idx = step // 5
+    seq_iter = -1
+    
+    for comp in self.comp_list:
+      seq_iter = seq_iter + 1
+      if idx == (seq_iter+1) : 
+        seq_input = esc_input_dict0[comp] + self.ps_allowable_diff_list[seq_iter]/5
+      else: 
+        seq_input = esc_input_dict0[comp]
+      executor.submit( self.comp_cha_list[comp].apply_current(seq_input) )
+ 
+
   # create time list data
   def write2df(self,df,row):
     for comp in self.comp_list:

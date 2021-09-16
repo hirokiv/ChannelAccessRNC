@@ -130,6 +130,9 @@ class ES_Algorithm_Parent:
     
     # Decay the amplitude
     self.amplitude = self.amplitude*self.decay_rate
+    # prevent amplitude goes up more than the initial setup
+    if (self.amplitude > 1.0):
+      self.amplitude = 1
 
     return self.pES[iter+1]
       
@@ -289,7 +292,7 @@ class ES_Algorithm( ES_Algorithm_Parent ):
     # self.Bx
     # self.phase
     df.loc[tstep,'Phase:k_ES*C+B'] = self.phase
-    df.loc[tstep,'Barrier:B(x)'] = self.Bx
+    df.loc[tstep,'Phase:Barrier:B(x)'] = self.Bx
     for idx in range(self.nES):
       df.loc[tstep,str('ESC_input'+ format(idx, '03'))] = self.pES[tstep, idx]
     return df

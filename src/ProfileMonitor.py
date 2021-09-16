@@ -1,9 +1,41 @@
+import warnings
+import datetime
+warnings.simplefilter("ignore",UserWarning)
+import matplotlib
+matplotlib.use('TkAgg')  # Or any other X11 back-end
+import matplotlib.pyplot as plt
+#matplotlib.use('GTK3Agg')  # Or any other X11 back-end
+# 'Qt4Agg', 'Qt4Cairo', 'Qt5Agg', 'Qt5Cairo',
+#matplotlib.use('TkCairo')
+
+from concurrent.futures import ThreadPoolExecutor
+#from concurrent.futures import ProcessPoolExecutor
+import numpy as np
+import pandas as pd
+import mglearn
+from sklearn import svm
+import sys
+import signal
+import time
+import user_pickle
 
 
-# Profile monitors
-  pf_list = [ 'PFb_U10a', 'PFb_U10b'] # , 'PFb_B12a', 'PFb_B12b']  #, 'PFb_B22', 'PFb_B31', 'PFb_B41', 'PFb_B50', 'PFb_B61', 'PFb_B71', 'PFb_C21a', 'PFb_S23', 'PFb_S31a', 'PFb_S31b', 'PFb_S41', 'PFb_S61', 'PFb_S64', 'PFb_S71', 'PFb_RRC_BM2', 'PFb_RRC_EBM', 'PFb_A01a', 'PFb_A02a', 'PFb_A02b', 'PFb_A1', 'PFb_A11b', 'PFb_D13', 'PFb_D14', 'PFb_D15', 'PFb_D16a', 'PFb_D16b', 'PFb_D17', 'PFb_D18', 'PFb_D50', 'PFb_5A1', 'PFb_5B1']
-#  pf_list = [ 'PFb_S64', 'PFb_S71', 'PFb_RRC_BM2', 'PFb_RRC_EBM', 'PFb_A01a']
-#  main_profile(pf_list)
+# User defined packages
+from UserChannelAccess import UserChannelAccess as CHA
+# from BaffleClass import BaffleClass as BaffleClass
+# from PSClass import PSClass as PSClass
+# from FCClass import FCClass as FCClass
+import CBF  # describing control barrier function 
+import gauss_fit as gf # Original function should be in the same folder
+from SVM_regression import SVM_regression  # original function. should be in the same folder
+from AS_ESC_Class import ES_Algorithm
+from ComponentsList import PSesList, BafflesList, FCsList
+# Import EPICS channel access interface
+from CaChannel import CaChannel, CaChannelException
+# Set division warning to error
+np.seterr(divide='raise')
+
+
 
 
 ################################################### 
@@ -75,34 +107,39 @@ def ProfileClass(string,idx):
   sigma_x,mu_x = gf.main(pos, xsvm, x, string + '_x', amp, idx) 
   sigma_y,mu_y = gf.main(pos, ysvm, y, string + '_y', amp, idx) 
  
-  l1,l2,l3,l4 = "DATA.XPF","DATA.YPF","DATA.ZPF","SVM DATA.XPF" 
-  c1,c2,c3,c4 = "blue","green","red","black" 
+  # try plot function
+  plot_w_label_correction(string,idx,pos,dpos, x,y,z,xsvm,0)
+  plot_w_label_correction(string,idx,pos,dpos, x,y,z,xsvm,1)
  
-  # plot configuration 
-  plt.rcParams['font.size'] = 14 
-   
-  # show scales internally plt.rcParams['xtick.direction'] = 'in' 
-  plt.rcParams['ytick.direction'] = 'in' 
-  
-  fig = plt.figure() 
-  ax = fig.gca() 
-  ax.grid() 
-#  ax.plot(data1, color=c1, label=l1) 
-#  ax.plot(data2, color=c2, label=l2) 
-  ax.plot(pos,x, color=c1, label=l1) 
-  ax.plot(pos,y, color=c2, label=l2) 
-  ax.plot(dpos,z, color=c3, label=l3) 
-  ax.plot(pos,xsvm, color=c4, label=l4) 
-#  ax.plot(a,color = c2) 
-  ax.set_xlabel('.DATA') 
-  ax.set_ylabel('y') 
-  ax.legend(loc=0) 
-  fig.tight_layout() 
- 
-  fig.savefig('../Image/esc_test_' + 'IDX' + "{:0>4}".format(idx) + '_' + string + '.png') 
- 
-  plt.clf() 
-  plt.close(fig) 
+# #  l1,l2,l3,l4 = "DATA.XPF","DATA.YPF","DATA.ZPF","SVM DATA.XPF" 
+#   l1,l2,l3,l4 = "DATA.XPF","DATA.YPF","DATA.ZPF","SVM DATA.XPF" 
+#   c1,c2,c3,c4 = "blue","green","red","black" 
+#  
+#   # plot configuration 
+#   plt.rcParams['font.size'] = 14 
+#    
+#   # show scales internally plt.rcParams['xtick.direction'] = 'in' 
+#   plt.rcParams['ytick.direction'] = 'in' 
+#   
+#   fig = plt.figure() 
+#   ax = fig.gca() 
+#   ax.grid() 
+# #  ax.plot(data1, color=c1, label=l1) 
+# #  ax.plot(data2, color=c2, label=l2) 
+#   ax.plot(pos,x, color=c1, label=l1) 
+#   ax.plot(pos,y, color=c2, label=l2) 
+#   ax.plot(dpos,z, color=c3, label=l3) 
+#   ax.plot(pos,xsvm, color=c4, label=l4) 
+# #  ax.plot(a,color = c2) 
+#   ax.set_xlabel('.DATA') 
+#   ax.set_ylabel('y') 
+#   ax.legend(loc=0) 
+#   fig.tight_layout() 
+#  
+#   fig.savefig('../Image/esc_test_' + 'IDX' + "{:0>4}".format(idx) + '_' + string + '.png') 
+#  
+#   plt.clf() 
+#   plt.close(fig) 
  
   return sigma_x,sigma_y,mu_x,mu_y,svmerror_x,svmerror_y 
  
@@ -149,6 +186,47 @@ def main_profile(pf_list):
  
   return df 
  
+def plot_w_label_correction(string,idx,pos,dpos,x,y,z,xsvm,mode):
+  if mode == 0: # label as raw data
+    l1,l2,l3,l4 = "DATA.XPF","DATA.YPF","DATA.ZPF","SVM DATA.XPF" 
+  elif mode == 1: # x is horizontal, y is vertical
+    l1,l2 = "Transverse profile","Vertical profile"
+
+  c1,c2,c3,c4 = "blue","green","red","black" 
+ 
+  # plot configuration 
+  plt.rcParams['font.size'] = 14 
+   
+  # show scales internally plt.rcParams['xtick.direction'] = 'in' 
+  plt.rcParams['ytick.direction'] = 'in' 
+  
+  fig = plt.figure() 
+  ax = fig.gca() 
+  ax.grid() 
+#  ax.plot(data1, color=c1, label=l1) 
+#  ax.plot(data2, color=c2, label=l2) 
+  if mode == 0:
+    ax.plot(pos,x, color=c1, label=l1) 
+    ax.plot(pos,y, color=c2, label=l2) 
+    ax.plot(dpos,z, color=c3, label=l3) 
+    ax.plot(pos,xsvm, color=c4, label=l4) 
+  elif mode == 1:
+    ax.plot(pos,y, color=c1, label=l1) 
+    ax.plot(pos,x, color=c2, label=l2) 
+#  ax.plot(a,color = c2) 
+  ax.set_xlabel('Position [mm]') 
+  ax.set_ylabel('Current (arb. units)') 
+  ax.legend(loc=0) 
+  fig.tight_layout() 
+ 
+  fig.savefig('../Image/esc_test_' + 'IDX' + "{:0>4}".format(idx) + '_' + string + '_MODE' + "{:0>2}".format(mode) + '.png') 
+ 
+  plt.clf() 
+  plt.close(fig) 
+ 
+
+
+
 def Plot_RadiusEvolution(ax,df): 
   # Plot pf radius info along course list 
   XShow = df[df["XERR"].isin([False])] 
@@ -175,4 +253,14 @@ def Plot_CentroidEvolution(ax,df):
   ax.set_ylabel('y') 
   ax.legend(loc=0, frameon=False) 
 
+
+
+
+if __name__ == '__main__':
+   #Profile monitors
+   pf_list = [ 'PFb_C01a','PFb_C01b','PFb_C02'] # , 'PFb_B12a', 'PFb_B12b']  #, 'PFb_B22', 'PFb_B31', 'PFb_B41', 'PFb_B50', 'PFb_B61', 'PFb_B71', 'PFb_C21a', 'PFb_S23', 'PFb_S31a', 'PFb_S31b', 'PFb_S41', 'PFb_S61', 'PFb_S64', 'PFb_S71', 'PFb_RRC_BM2', 'PFb_RRC_EBM', 'PFb_A01a', 'PFb_A02a', 'PFb_A02b', 'PFb_A1', 'PFb_A11b', 'PFb_D13', 'PFb_D14', 'PFb_D15', 'PFb_D16a', 'PFb_D16b', 'PFb_D17', 'PFb_D18', 'PFb_D50', 'PFb_5A1', 'PFb_5B1']
+  #  pf_list = [ 'PFb_S64', 'PFb_S71', 'PFb_RRC_BM2', 'PFb_RRC_EBM', 'PFb_A01a']
+   main_profile(pf_list)
+  
+  
 

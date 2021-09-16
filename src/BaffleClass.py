@@ -1,5 +1,5 @@
 from UserChannelAccess import UserChannelAccess as CHA
-from CBF import CBF_Sigmoid
+import CBF
 import time
 import random
 from concurrent.futures import ThreadPoolExecutor
@@ -8,12 +8,13 @@ from concurrent.futures import ThreadPoolExecutor
 class BaffleClass():  # Store Channel access class for each baffle components
 ###################################################################
 
-  def __init__(self, bfname, bf_curr_lim):
+  def __init__(self, bfname, bf_curr_lim, CBFTYPE='Linear'):
     print ('BafleClass ' + bfname + ' initialized')
 
     self.bfname = bfname
     self.bf = {}
-    self.CBFTYPE = 'Linear'
+#    self.CBFTYPE = 'Linear'
+    self.CBFTYPE = CBFTYPE
 
     bfr = CHA('sl:' + bfname + 'R:nACur', T=100, timeout=0.5, KFSET='ON') # right
     if bfr.error_flag == 0:
@@ -77,10 +78,25 @@ class BaffleClass():  # Store Channel access class for each baffle components
 #      print(CBF_Sigmoid(self.bf[key].fetch_est(), self.bf_curr_lim, cbf_mu, cbf_t))
     # if sigmoid function preferrred 
       if self.CBFTYPE == 'Sigmoid':
-        comp_CBF = CBF_Sigmoid(self.bf[key].fetch_est(), self.bf_curr_lim, cbf_mu, cbf_t)
+        comp_CBF = CBF.CBF_Sigmoid(self.bf[key].fetch_raw(), self.bf_curr_lim, cbf_mu, cbf_t)
       elif self.CBFTYPE == 'Linear':
-        comp_CBF = self.bf[key].fetch_est() / self.bf_curr_lim
+#        print('Linear CBF called')
+        # cbf_t describes the slope of CBF
+        # curr_lim describes where CBF initiates
+      #  cbf_t = 200
+        comp_CBF = CBF.CBF_LinearWithDeadZone(self.bf[key].fetch_raw(), self.bf_curr_lim, cbf_t)
+      elif self.CBFTYPE == 'AbsLinear':
+#        print('AbsLinear CBF called')
+        comp_CBF = CBF.CBF_AbsLinear(self.bf[key].fetch_raw(), self.bf_curr_lim, cbf_t)
       Bx_est = Bx_est +  comp_CBF    
+      
+#      print('comp_CBF = {}' .format(comp_CBF))
+#    print('Bx_est = {}' .format(Bx_est))
+
+    # addd penalty for (IR-IL)^2 + (IU-ID)^2
+    Bx_est = Bx_est + abs((self.bf['R'].fetch_raw() - self.bf['L'].fetch_raw())/5000)
+    Bx_est = Bx_est + abs((self.bf['U'].fetch_raw() - self.bf['D'].fetch_raw())/5000)
+    
     return Bx_est
 
 

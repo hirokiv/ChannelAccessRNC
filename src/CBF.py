@@ -9,6 +9,23 @@ def CBF_Sigmoid(x,b=20,mu=100,t=1):
   B = mu / (1 + np.exp((b-x)/t))
   return B
 
+def CBF_LinearWithDeadZone(x,lim,slope):
+  if x<lim : 
+    B = 0
+  else:
+    B = (x-lim) / slope 
+  return B
+
+def CBF_AbsLinear(x,lim,slope):
+  if x< 0.1 :
+    B = (lim-x) / slope  + 0.1
+  elif x<lim : 
+    B = (lim-x) / slope 
+  else:
+    B = (x-lim) / slope 
+  return B
+
+
 if __name__=='__main__':
   x = np.linspace(-10.,200.,100) 
   fig = plt.figure()

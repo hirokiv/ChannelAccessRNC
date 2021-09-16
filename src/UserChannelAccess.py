@@ -15,7 +15,7 @@ from CaChannel import CaChannel, CaChannelException
 #####################
 class UserChannelAccess: # CHannel Access
 
-  def __init__(self, caname, T=1000, timeout=0.5, KFSET='OFF', sigv2=1, sigw2=2, buff_mode='Single'):
+  def __init__(self, caname, T=1000, timeout=1.0, KFSET='OFF', sigv2=1, sigw2=2, buff_mode='Single'):
     self.caname = caname
     self.chan = CaChannel(caname)
     self.chan.setTimeout(timeout)
@@ -65,7 +65,7 @@ class UserChannelAccess: # CHannel Access
   def buffering(self):
     self.read_ca()
     self.buff = self.buff[1:]
-    self.buff.append( self.fetch() )
+    self.buff.append( self.fetch_raw() )
 
     if self.KFSET == 'ON':
       self.KF_in_buffering()
@@ -153,9 +153,9 @@ class UserChannelAccess: # CHannel Access
 
     try:
       if isinstance(self.caname,str):
-#        self.chan.searchw()
+        self.chan.searchw()
         self.chan.putw(putval)
-        self.chan.pend_io()
+#        self.chan.pend_io()
         self.val = self.chan.getw()
 #        print('self.val = ' + str(self.val))
 #        print('putval   = ' + str(putval))
