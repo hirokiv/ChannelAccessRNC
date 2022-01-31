@@ -10,6 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import matplotlib.ticker as ticker
+import ParameterHandler as PH
 
 font_size = 16
 plt.rcParams.update({'font.size': font_size})
@@ -59,7 +60,7 @@ class ES_Algorithm_Parent:
     self.cES[0] = self.f_ES_minimize(self.pES[0],0,observation)    
 
     # ES dithering frequencies
-    self.wES = np.linspace(1.0/4,1.75/4,self.nES)
+    self.wES = np.linspace(1.0,1.75,self.nES)
     
     # ES dt step size
     self.dtES = 2*np.pi/(10*np.max(self.wES))
@@ -79,6 +80,13 @@ class ES_Algorithm_Parent:
     # Decay amplitude
     self.amplitude = 1.0
     
+    # parameter handler to edit amplitude
+    amp_range = [0.05,1]
+    self.ph_amp   = PH.ParameterHandler('amplitude', self.amplitude, prange=amp_range)
+    drate_range = [0.9,1.0]
+    self.ph_decay = PH.ParameterHandler('decay_rate', self.decay_rate, drate_range)
+
+
 
   # Function that normalizes paramters
   def p_normalize(self,p):
@@ -113,7 +121,7 @@ class ES_Algorithm_Parent:
       # Return the next value
       return p_next
     
-  def ES_main_loop(self, iter, observation):
+  def ES_main_loop(self, iter, observation=0):
     # Now we start the ES loop
         
     # Normalize previous parameter values
@@ -129,7 +137,10 @@ class ES_Algorithm_Parent:
     self.cES[iter+1] = self.f_ES_minimize(self.pES[iter+1],iter+1, observation) 
     
     # Decay the amplitude
-    self.amplitude = self.amplitude*self.decay_rate
+    self.amplitude = self.amplitude * self.decay_rate
+    # read and write parameter to file s.t. you can change amplitude by editing the amplitude.txt file
+    self.amplitude = self.ph_amp.renew_parameter(self.amplitude) 
+    self.decay_rate = self.ph_decay.renew_parameter(self.decay_rate) 
     # prevent amplitude goes up more than the initial setup
     if (self.amplitude > 1.0):
       self.amplitude = 1
@@ -236,11 +247,102 @@ class ES_Algorithm( ES_Algorithm_Parent ):
     self.Bx = 0
     self.Bx_list = [np.nan]*(self.ES_steps+1)
 
+  # this is simple sum of barrier functions
   def Set_Barrier(self, val, iter):
     self.Bx = val
     self.Bx_list[iter+1] = val
 
+  ## function below activates adaptive weightings of barrier functions
+  def DefineBarrierWeights(self, Blist):
+    self.w = {} # empty weight for baffle values
+    for Blist_key in Blist.keys():
+        self.w[Blist_key] = {}
+        for RLUD in Blist[Blist_key].keys():
+          # temporaliry define all weights to be 1
+          self.w[Blist_key][RLUD] = 1.0
+
+  def DefineBxlistBuffer(self, Blist, Bx_buffsize):
+     self.Blist_buff = {}
+     for Blist_key in Blist.keys():
+        self.Blist_buff[Blist_key] = {}
+        for RLUD in Blist[Blist_key].keys():
+          # temporaliry define all weights to be 1
+          # generate Bx buffer
+          self.Blist_buff[Blist_key][RLUD] = np.ones(Bx_buffsize) * Blist[Blist_key][RLUD]
+
+
+  def UpdateWeights(self, iter, bfname, reg_sig2=0.001, maven=20):
+    # define moving average
+    # def moving_average(data_set, periods):
+    #     weights = np.ones(periods) / periods
+    #     return np.convolve(data_set, weights, mode='valid')
+    def moving_average(data, N):
+      y_padded = np.pad(data, (N//2, N-1-N//2), mode='edge')
+      y_smooth = np.convolve(y_padded, np.ones((N,))/N, mode='valid')
+      return y_smooth
+
+    # initialize 
+    sig2 = {}
+    wnorm_post = 0
+    wnorm_pre  = 0
+    # fetch prior w
+    weight_pre = self.w[bfname].copy() 
+    alpha_reg = reg_sig2; # regulation factor
+
+    for key in weight_pre.keys(): # should be RLUD
+      Bmave = moving_average(self.Blist_buff[bfname][key], maven)
+      Bfluct = self.Blist_buff[bfname][key] - Bmave
+      sig2[key] = np.var(Bfluct) 
+      self.w[bfname][key] = np.sqrt( 0.5*0.5 / (sig2[key] + alpha_reg) ) ;  
+
+      wnorm_post = wnorm_post + self.w[bfname][key]
+      wnorm_pre  = wnorm_pre +  weight_pre[key]
+    
+    # regulate length of w after update less than 2.0 times the one before. 
+    # too high weights will be reduced by SanityCheck function later
+    if (wnorm_post > (1.5 * wnorm_pre) ):
+      for key in weight_pre.keys():
+        self.w[bfname][key] = self.w[bfname][key] * 1.5 * wnorm_pre / wnorm_post
+
+
+  def BufferBx(self, Blist):
+    for Blist_key in Blist.keys():
+      for RLUD in Blist[Blist_key].keys():
+          self.Blist_buff[Blist_key][RLUD] = np.roll(self.Blist_buff[Blist_key][RLUD], -1)
+          self.Blist_buff[Blist_key][RLUD][-1] = Blist[Blist_key][RLUD]
+
+  # check if adaptively set weights are OK to be applied by judging if each update \Delta*wB exceeds 0.5 or not
+  def SanityCheck(self, bfname, thre=1.0):
+    # temporary factor value to be updated
+    factor = thre
+
+    for RLUD in self.w[bfname].keys():
+      temp = self.w[bfname][RLUD] * (self.Blist_buff[bfname][RLUD][-1] - self.Blist_buff[bfname][RLUD][-2])
+      if (abs(temp) > thre) :
+        print('ESC: Sanity check function detected erronous weight')
+        factor = max(temp, factor)
+
+    for RLUD in self.w[bfname].keys():
+      self.w[bfname][RLUD] = self.w[bfname][RLUD] * thre / factor
+      # print(str(RLUD + ':' + format(self.w[bfname][RLUD], '02.02f') ) )
+
+
+  # set adaptive weighting for each B values
+  def Set_weightedBarrier(self, Blist, iter):
+    # define noise magnitude which is used as regularization factor
+    self.Bx = 0
+
+    for Blist_key in Blist.keys():
+        for RLUD in Blist[Blist_key].keys():
+          # temporaliry define all weights to be 1
+          self.Bx = self.Bx + self.w[Blist_key][RLUD] * Blist[Blist_key][RLUD]
+
+    self.Bx_list[iter+1] = self.Bx
+
+
+  ###########################################################################
   # This function defines one step of the ES algorithm at iteration i
+  ###########################################################################
   def ES_step(self,p_n,i,cES_now,amplitude):
       # ES step for each parameter
       p_next = np.zeros(self.nES)
@@ -295,12 +397,20 @@ class ES_Algorithm( ES_Algorithm_Parent ):
     df.loc[tstep,'Phase:Barrier:B(x)'] = self.Bx
     for idx in range(self.nES):
       df.loc[tstep,str('ESC_input'+ format(idx, '03'))] = self.pES[tstep, idx]
+    df.loc[tstep,'ESC_amplitude'] = self.amplitude
+    df.loc[tstep,'ESC_decay_rate'] = self.decay_rate
+
+    w_lastkey = list(self.w.keys())[-1]
+    for RLUD in self.w[w_lastkey].keys():
+      df.loc[tstep,str('weight:' + w_lastkey + RLUD )] = self.w[w_lastkey][RLUD]
+
     return df
 
 
 
 
 if __name__=='__main__':
+  import time
 
   # number of steps
   ES_steps = 2000
@@ -318,7 +428,7 @@ if __name__=='__main__':
 
   class ES_Algorithm_User(ES_Algorithm):
 
-    def f_ES_minimize(self,p,i):
+    def f_ES_minimize(self,p,i,observation=0):
       f_val = (np.linalg.norm(p, ord=2)-1)**2
       return f_val
 
@@ -330,6 +440,7 @@ if __name__=='__main__':
       Bx = 0
       es_class.Set_Barrier(Bx, iter)
       es_input = es_class.ES_main_loop(iter)
+      time.sleep(0.1)
 
   fig1 = plt.figure(2,figsize=(10,15))
   es_class.Plot_normalized_params(fig1)

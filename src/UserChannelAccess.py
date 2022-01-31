@@ -7,7 +7,7 @@ import time
 from scipy import linalg
 
 # Import EPICS channel access interface
-from CaChannel import CaChannel, CaChannelException
+from CaChannel import CaChannel, ca, CaChannelException
 
 
 #####################
@@ -15,7 +15,7 @@ from CaChannel import CaChannel, CaChannelException
 #####################
 class UserChannelAccess: # CHannel Access
 
-  def __init__(self, caname, T=1000, timeout=1.0, KFSET='OFF', sigv2=1, sigw2=2, buff_mode='Single'):
+  def __init__(self, caname, T=200, timeout=2.0, KFSET='OFF', sigv2=1, sigw2=2, buff_mode='Single'):
     self.caname = caname
     self.chan = CaChannel(caname)
     self.chan.setTimeout(timeout)
@@ -62,8 +62,11 @@ class UserChannelAccess: # CHannel Access
         # body of destructor
     return
 
-  def buffering(self):
-    self.read_ca()
+  def buffering(self, flag=0):
+    # don't connect and read channel by default
+    if flag==1:
+      self.read_ca()
+
     self.buff = self.buff[1:]
     self.buff.append( self.fetch_raw() )
 
@@ -91,7 +94,28 @@ class UserChannelAccess: # CHannel Access
     #self.buff_est.append(  self.fetch_est()  )
     self.buff_est = np.append( self.buff_est,  self.fetch_est()  )
 
+  
+  def monitor_ca(self):
+    #connect asynchronously
 
+    # value change callback
+    def monitor_callback(epics_arg, user_arg):
+        chan = user_arg[0]
+        value = epics_arg['pv_value']
+        self.val = value
+        self.buffering()
+  
+    # in the connection callback we will subscribe for value changes
+    def connection_callback(epics_arg, user_arg):
+        chan = user_arg[0]
+        if epics_arg[1] == ca.CA_OP_CONN_UP:
+            chan.add_masked_array_event(None, None, None, monitor_callback, chan)
+            chan.flush_io
+
+    self.chan.search_and_connect(None, connection_callback, self.chan)
+
+  def flush_io(self):
+    self.chan.flush_io()
 
   def read_ca(self):
 
@@ -119,9 +143,9 @@ class UserChannelAccess: # CHannel Access
 
     if isinstance(self.caname,str):
       a = np.empty_like(range(num),dtype=np.float)
-      self.chan.searchw()
-      self.chan.search()
-      self.chan.pend_io()
+      # self.chan.searchw()
+      # self.chan.search()
+      # self.chan.pend_io()
 
       for i in range(num):
         try: 
@@ -153,21 +177,20 @@ class UserChannelAccess: # CHannel Access
 
     try:
       if isinstance(self.caname,str):
-        self.chan.searchw()
+#        self.chan.searchw()
         self.chan.putw(putval)
-#        self.chan.pend_io()
-        self.val = self.chan.getw()
+        self.chan.pend_io()
+#        a = self.chan.getw()
 #        print('self.val = ' + str(self.val))
 #        print('putval   = ' + str(putval))
 #        if self.val != putval:
 #          print('Error in putting value to ' + self.caname)
-#          sys.exit()
       else:
         print('Channel definition false : specify string')
     except CaChannelException as e:
        print(e)
        print('Error in Putting Channel ' + self.caname)
-       sys.exit()
+#       sys.exit()
 
 
   def show_caname(self):
@@ -210,3 +233,17 @@ class UserChannelAccess: # CHannel Access
     return ax
 
 
+if __name__ == '__main__':
+
+  bf = UserChannelAccess("sl:BF_C03R:nACur")
+  fc = UserChannelAccess("fc:FCh_A02b:nACur")
+  bf.monitor_ca()
+  fc.monitor_ca()
+  bf.flush_io()
+
+
+  for idx in range(10):
+    time.sleep(1)
+
+  print(bf.buff)
+  print(fc.buff)

@@ -4,6 +4,7 @@ import os
 import time
 
 line_num = 1
+base_path = './Writable/'
 
 
 class ParameterHandler:
@@ -17,11 +18,16 @@ class ParameterHandler:
 
 
   def read_parameter(self):
-    with open(self.filename, "r") as txt_file:
-      return txt_file.readlines()
+    try:
+      with open(base_path+self.filename, "r") as txt_file:
+        temp = txt_file.readlines()
+        print(temp)
+        return temp 
+    except:
+      return self.prefile
   
   def write_parameter(self, param):
-    with open("amplitude.txt", "w") as txt_file:
+    with open(base_path+self.filename, "w") as txt_file:
       lines = [self.filename[:-4]+'\n', str(param)]
       txt_file.writelines(lines)
       self.prefile = lines
@@ -41,8 +47,8 @@ class ParameterHandler:
 
   def check_parameter_range(self, param):
     # check if parameter is within allowable range
-    flag_lower = (self.orig_parameter * self.prange[0]) > param
-    flag_upper = (self.orig_parameter * self.prange[1]) < param
+    flag_lower = (self.prange[0]) > param
+    flag_upper = (self.prange[1]) < param
     flag = flag_upper | flag_lower
     if flag:
       # value out of range, stop writing
@@ -53,15 +59,20 @@ class ParameterHandler:
 
 
 if __name__ == '__main__':
-  amp_ratio_range = [0.02, 1] # specify param in ratio
+  amp_range = [0.02, 1.0] # specify param in abs
   amplitude = 1
-  ph = ParameterHandler('amplitude', amplitude, amp_ratio_range)
+  ph_amp = ParameterHandler('amplitude', amplitude, amp_range)
+  drate_range = [0.9,1.0]
   decay_rate = 0.999
+  ph_decay = ParameterHandler('decay_rate', decay_rate, drate_range)
+
   while True: 
-    time.sleep(0.01)
+    time.sleep(0.1)
     amplitude = amplitude * decay_rate
-    amplitude = ph.renew_parameter(amplitude)
+    amplitude = ph_amp.renew_parameter(amplitude)
+    decay_rate = ph_decay.renew_parameter(decay_rate)
 
     # print('Current amplitude')
     print(amplitude)
+    print(decay_rate)
 

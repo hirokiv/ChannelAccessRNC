@@ -60,7 +60,8 @@ class ES_Algorithm_User(ES_Algorithm):
       # f_val = (np.linalg.norm(p, ord=2)-1)**2
 #      f_val = 0
 #      f_val = (15200.0 - observation )**2
-      f_val = (20000.0 - observation )
+#      f_val = (20000.0 - observation )
+      f_val = 0
 #      if (observation < 13500.0): 
 #        print('Process terminated automatically')
 #        print('Observation value reached lower limit')
@@ -158,6 +159,8 @@ if __name__ == '__main__':
   # Generate baffle classs
 
   COURSE = 'AVF_Shootout'
+#  COURSE = 'RRC'
+  #COURSE = 'AVF_Shootout_Test'
 
   if COURSE=='RRC' : 
     baffle_course = 'BF_RRC_REDUCED'
@@ -170,9 +173,18 @@ if __name__ == '__main__':
 
   elif COURSE=='AVF_Shootout':
     baffle_course = 'BF_AVF_Shoot'
+    #baffle_course = 'BF_AVF_SL_TEST'
     PS_course =     'PS_AVF_Shoot'
-    FC_course = 'FC_AVF_Shoot'
+    FC_course = 'FCh_A02b'
 
+  elif COURSE=='AVF_Shootout_Test':
+    baffle_course = 'BF_AVF_Shoot_Test'
+    #baffle_course = 'BF_AVF_SL_TEST'
+    PS_course =     'PS_AVF_Shoot_Test'
+    FC_course = 'FC_AVF_Shoot_Test'
+
+
+  sampleT = 0.1
 
   ###################
   ### 1. all baffles
@@ -180,6 +192,8 @@ if __name__ == '__main__':
   if baffle_course == 'BF_RRC_ALL':
     bf_list = ['BF_R_MIC2e', 'BF_R_MIC1e', 'BF_R_EICe', 'BF_R_MIC1i', 'BF_R_MDC1i', 'BF_R_MDC2i','BF_R_VALi', 'BF_R_MDC1e', 'BF_R_MDC1x', 'BF_R_MDC2e', 'BF_R_MDC2x']
   # reduced model
+    Bx_buffsize = 200
+    eval_bfname = bf_list[-1]
   elif baffle_course == 'BF_RRC_REDUCED':
     bf_list = ['BF_R_MIC2e', 'BF_R_MIC1e', 'BF_R_MDC1e', 'BF_R_MDC2e']
     ### allowable current for each baffles in nA
@@ -188,14 +202,29 @@ if __name__ == '__main__':
     ### generate baffles class instance
     CBFTYPE = ['Linear']*len(bf_list)
     bafflesList = BafflesList(bf_list, bf_curr_lim_list, CBFTYPE)
+    Bx_buffsize = 200
+    eval_bfname = bf_list[-1]
   elif baffle_course == '28G_TEST':
     bf_list = ['SL_U10']
   elif baffle_course == 'BF_AVF_Shoot':
-    bf_list = ['SL_C01a','BF_C03']
-    bf_curr_lim_list = [0.0, 100.0]
+    # bf_list = ['SL_C01a','BF_C03']
+    # bf_curr_lim_list = [0.0, 100.0]
+    # ### generate baffles class instance
+    # CBFTYPE = ['Linear', 'AbsLinear']
+    bf_list = ['BF_C03']
+    bf_curr_lim_list = [ 100.0]
     ### generate baffles class instance
-    CBFTYPE = ['Linear', 'AbsLinear']
+    CBFTYPE = ['AbsLinear']
     bafflesList = BafflesList(bf_list, bf_curr_lim_list, CBFTYPE)
+    eval_bfname = bf_list[-1]
+  elif baffle_course == 'BF_AVF_Shoot_Test':
+    bf_list = ['SL_C01a']
+    bf_curr_lim_list = [300.0]
+    ### generate baffles class instance
+    CBFTYPE = ['AbsLinear']
+    bafflesList = BafflesList(bf_list, bf_curr_lim_list, CBFTYPE)
+    eval_bfname = bf_list[-1]
+
 
 
   ###################
@@ -217,8 +246,10 @@ if __name__ == '__main__':
     #    ps_list = ['A_ST24', 'A_Q30', 'A_Q31', 'A_Q32', 'A_ST26', 'BM2', 'BM1_1', 'BM1_2', 'MIC2', 'MIC1']
 
     # limit applyable input difference from the initial input 
-    ps_allowable_diff_list = [ 2.0]*4
-    ps_allowable_diff_list.extend( [ 30.0]*3 )
+#    ps_allowable_diff_list = [ 2.0]*4
+    ps_allowable_diff_list = [ 0.01]*4
+#    ps_allowable_diff_list.extend( [ 30.0]*3 )
+    ps_allowable_diff_list.extend( [ 0.001]*3 )
     # power supplier type {dim, ndim, etc}, 
     # currently only dim & ndim type is defined in PSesClass.py
     pstype_list = ['dim']*len(ps_list)
@@ -245,11 +276,31 @@ if __name__ == '__main__':
 #    # limit applyable input difference from the initial input 
 #    ps_allowable_diff_list = [0.1, 1.0, 1.0, 1.0, 0.1, 0.1, 1.0, 1.0]
     ##### Omit S1 as it doesn't respond well
-    ps_list = ['AVF_Q1','AVF_Q2','AVF_Q3','AVF_S3','AVF_S4','AVF_Q4','AVF_Q5']
-    # limit applyable input difference from the initial input 
-    ps_allowable_diff_list = [ 0.2, 0.2, 0.5, 1.0, 0.5, 1.0, 1.0]
-  
+    # operation before 3:21
+    ps_list = [ 'AVF_Q1','AVF_Q2','AVF_Q3','AVF_S3','AVF_S4','AVF_Q4','AVF_Q5']
+#    # limit applyable input difference from the initial input 
+#    ps_allowable_diff_list = [3.0, 3.0, 3.0, 0.5, 0.5, 3.0, 3.0]
+    #ps_allowable_diff_list = [3.0, 3.0, 3.0, 1.0, 1.0, 3.0, 3.0] # .    set 1
+    ps_allowable_diff_list = [5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0]# . set 2
+#    ps_allowable_diff_list = [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
+
+#    ps_list = [ 'AVF_Q3','AVF_S3','AVF_S4','AVF_Q4','AVF_Q5']
+#    ps_allowable_diff_list = [1.0, 2.0, 1.0, 1.0, 5.0]
     pstype_list = ['dim']*len(ps_list)
+    Bx_buffsize = 200
+
+  elif PS_course == 'PS_AVF_Shoot_Test':
+   # power supplier type {dim, ndim, etc}, 
+#    ps_list = ['AVF_S1','AVF_Q1','AVF_Q2','AVF_Q3','AVF_S3','AVF_S4','AVF_Q4','AVF_Q5']
+#    # limit applyable input difference from the initial input 
+#    ps_allowable_diff_list = [0.1, 1.0, 1.0, 1.0, 0.1, 0.1, 1.0, 1.0]
+    ##### Omit S1 as it doesn't respond well
+    ps_list = ['AVF_S1', 'AVF_Q1','AVF_Q2','AVF_Q3']
+    # limit applyable input difference from the initial input 
+    ps_allowable_diff_list = [0.5, 5.0, 5.0, 5.0]
+    pstype_list = ['dim']*len(ps_list)
+    Bx_buffsize = 100
+
 
   psesList = PSesList(ps_list, ps_allowable_diff_list, pstype_list)
   esc_input_dict = psesList.return_esc_input_list()
@@ -263,50 +314,65 @@ if __name__ == '__main__':
     fc_list = ['FC_U10']
   elif FC_course == 'FCh_A02a':
     fc_list = ['FCh_A02a']
+  elif FC_course == 'FCh_A02b':
+    fc_list = ['FCh_A02b']
   elif FC_course == 'FCs_A11b':
     fc_list = ['FCs_A11b']
   elif FC_course == 'FC_AVF_Shoot':
     fc_list = ['FC_C03']
+  elif FC_course == 'FC_AVF_Shoot_Test':
+    fc_list = ['FC_C01a']
+  elif FC_course == 'NONE':
+    fc_list = []
 
-  fc1 =  FCsList(fc_list, T = 1000, delay=0.1, ave_times = 4, buff_mode = 'Average') # averaging it 4 times
+
+
+  fc1 =  FCsList(fc_list, T = 1000, delay=0.1, ave_times = 2, buff_mode = 'Average') # averaging it 4 times
   # Kalman filter configuration 
-#  sigv2 = 20 # nA faraday cup sensitivity corresponds to R
-#  sigw2 = 40 # nA observation noise corresponds to Q
-#  fc1.initialize_nACur_KF( sigv2, sigw2 )
+  #  sigv2 = 20 # nA faraday cup sensitivity corresponds to R
+  #  sigw2 = 40 # nA observation noise corresponds to Q
+  #  fc1.initialize_nACur_KF( sigv2, sigw2 )
 
 
 
 
-###############################################################
-#### Design Barrier function specification
-###############################################################
+  ###############################################################
+  #### Design Barrier function specification
+  ###############################################################
   cbf_mu_init = 1 # barrier function gain C' = kC + muB
-#  cbf_mu_end = 1 # barrier function gain C' = kC + muB
-  cbf_t = 200.0 # slope of barrier function
-#  cbf_t = 10.0 # slope of barrier function
+  #  cbf_mu_end = 1 # barrier function gain C' = kC + muB
+  cbf_t = 100.0 # slope of barrier function
+  #  cbf_t = 10.0 # slope of barrier function
   cbf_mu = cbf_mu_init
-#  cbf_mu_list = np.linspace(cbf_mu_init, cbf_mu_end, ES_steps)
-#  cbf_mu0 = cbf_mu_list[0]
+  #  cbf_mu_list = np.linspace(cbf_mu_init, cbf_mu_end, ES_steps)
+  #  cbf_mu0 = cbf_mu_list[0]
   
 
 ###############################################################
 #### Initialize ESC control class
 ###############################################################
-  ES_steps = 2000
+  ES_steps = 4000
   # Upper bounds on tuned parameters
   p_max = np.array(list(esc_input_dict.values())) + ps_allowable_diff_list
   # Lower bounds on tuned parameters
   p_min = np.array(list(esc_input_dict.values())) - ps_allowable_diff_list
   # kES needs some trial and error,  kES times B should be around the order of 100
-  kES = 1e-5
+  kES = 1e-9
   # the parameters to have normalized osciallation sizes you choose the aES as:
-  oscillation_size = 0.1
+  oscillation_size = 0.02
   # decay_rate of input. signal decays as exp( -at) 
-  decay_rate = 0.999
+  decay_rate = 1.0 # 0.999
   # initiate ES algorithm class instance
   es_class = ES_Algorithm_User(ES_steps,p_max,p_min,kES,oscillation_size,decay_rate,observation=fc1.fetch())
-  Bx_bf_est = bafflesList.Calc_CBFs(cbf_mu, cbf_t)
-  es_class.Set_Barrier(Bx_bf_est, -1) 
+  bafflesList.Calc_CBFs(cbf_mu, cbf_t)
+  # BF_result contains 1. simple sum of all Bs, 2. each B value in key 
+  es_class.Set_Barrier(bafflesList.Fetch_Bx(), -1) 
+  # define weight
+  es_class.DefineBarrierWeights( bafflesList.Fetch_Blist() )
+  # define Bxlist_buff
+  es_class.DefineBxlistBuffer( bafflesList.Fetch_Blist(), Bx_buffsize )
+  # Blist = BF_result[1]
+  # es_class.Set_weightedBarrier(Blist, -1) 
    
 
   #######################################################################################
@@ -348,7 +414,7 @@ if __name__ == '__main__':
   ## initialize executor
   ######################################################################
   # Please limit the number of max_workers to be 16
-  executor = ThreadPoolExecutor(max_workers=8)
+  executor = ThreadPoolExecutor(max_workers=4)
   
 
   ######################################################################
@@ -364,6 +430,13 @@ if __name__ == '__main__':
       futures += comp_future[:]
     return futures
 
+  def monitor_CAs():
+    global psesList, bafflesList, fc1
+    for kind in [ fc1, psesList, bafflesList]:
+      # fc1 should come first as it averages out the signal
+      kind.monitor_ca()
+    psesList.comp_cha_list[psesList.comp_list[0]].aiCnv.flush_io()
+ 
     # just submit
 #    if (step % 20 == 0):
 #      async_future1 = executor.submit(plot_functions, fc1,fc2,bf1)
@@ -436,7 +509,6 @@ if __name__ == '__main__':
   # show figures every tshow
   tshow = 20   
   # execute loop every sampleT [s]
-  sampleT = 1.5
   
   t_list = range(ES_steps)
 
@@ -453,6 +525,9 @@ if __name__ == '__main__':
   ###############################################################
   # Prepare dataframe for fileoutput
   df = initialize_data_frame(ES_steps)
+  # activate CA monitors
+  monitor_CAs()
+  time.sleep(1.0)
 
 
   ## 1.Update baffle values
@@ -464,12 +539,12 @@ if __name__ == '__main__':
     # add iteration number for the information of the next step
 
     ################################################################
-    # buffering function to be processed in different Threads
+    # buffering function replaced by CA monitor 
     ################################################################
     # execute buffering
     # returns submitted list of pooled jobs
-#    print('Line 1 ' +  datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3] )
-    futures = loop_buffering(executor)
+    #    print('Line 1 ' +  datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3] )
+    # futures = loop_buffering(executor)
 
 
     # following plot line can still process while executing the functions above
@@ -479,9 +554,9 @@ if __name__ == '__main__':
       executor.submit( df_dump_to_files(df, init_time_str) )
 
 
-    # Wait for all the buffering process finishes
-    for future in futures: # baffles, FC, PS
-      future.result()
+#    # Wait for all the buffering process finishes
+#    for future in futures: # baffles, FC, PS
+#      future.result()
 
 #    print('Line 2 ' +  datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3] )
 
@@ -490,15 +565,26 @@ if __name__ == '__main__':
     ## Calculate control parameters
     ########################################################
     # Add baffle CBF results to Bx
-    Bx_bf_est = bafflesList.Calc_CBFs(cbf_mu, cbf_t)
+    bafflesList.Calc_CBFs(cbf_mu, cbf_t)
     # Store Bx value to the ESC algorithm
-    es_class.Set_Barrier(Bx_bf_est, tstep) 
+    # es_class.Set_Barrier(BF_result[0], tstep) 
+    es_class.BufferBx( bafflesList.Fetch_Blist() )
+    if (tstep >= Bx_buffsize):
+      # activate adaptive weighting for baffles
+      if (tstep % Bx_buffsize == 0):
+        es_class.UpdateWeights(tstep, eval_bfname)
+      # regulate weight value to have small enough value s.t. ESC stay stable
+      es_class.SanityCheck(eval_bfname)
+      es_class.Set_weightedBarrier(bafflesList.Fetch_Blist(), tstep) 
+    else:
+      # simple sum of all the barrier function
+      es_class.SanityCheck(eval_bfname)
+      es_class.Set_Barrier(bafflesList.Fetch_Bx(), tstep) 
+
     esc_input = es_class.ES_main_loop(tstep, fc1.fetch())
-
     # convert array into dict 
-   
     esc_input_dict = {key: val for key, val in zip(esc_input_dict.keys(), esc_input)}
-
+    
     ####################################################################
     # in the following df writer, df is defined as GLOBAL function
     ####################################################################
@@ -507,8 +593,15 @@ if __name__ == '__main__':
     ######### ######### ######### ######### #########
     # apply esc values for each PS
     ######### ######### ######### ######### #########
-    psesList.apply_currents_pool(esc_input_dict, executor) 
+    #    #psesList.apply_currents_pool(esc_input_dict, executor) 
+    # psesList.apply_currents(esc_input_dict) 
+    # see if step value is changed and DAC value reflected
+    psesList.check_reflection()
+
 #    psesList.apply_currents_sequential(esc_input_dict0, executor, tstep) 
+#    for future in futures: # baffles, FC, PS
+#      future.result()
+
     ######### when testing apply function, consider taking ES_step to be 1 #########
 
     if tstep == (ES_steps-1): 
@@ -517,8 +610,8 @@ if __name__ == '__main__':
     current_time_list[tstep+1] = time.time()
     elapsed_sec = current_time_list[tstep+1] - begin_time # in second
     sleep_sec = sampleT - (elapsed_sec % sampleT)
-    if sleep_sec > 0.5*sampleT: 
-      sleep_sec = 0
+    #    if sleep_sec > 0.5*sampleT: 
+    #      sleep_sec = 0
     time.sleep(max(sleep_sec, 0))
 
 

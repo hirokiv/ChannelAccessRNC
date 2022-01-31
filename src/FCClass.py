@@ -66,7 +66,8 @@ class FCClass():  # Store Channel Access class for each faraday cup
       futures.append(future)
       return futures
 
-
+  def monitor_ca(self):
+    self.nACur.monitor_ca()
 
   def initialize_nACur_KF(self, sigv2, sigw2):
      # sigv2 variance noise

@@ -42,6 +42,11 @@ class ComponentsList:
 #     
 #     return 0
 
+  def monitor_ca(self):
+    self.buff_iter = self.buff_iter + 1
+    for comp in self.comp_list:
+      self.comp_cha_list[comp].monitor_ca()
+
   def buffering_pool(self, executor):
   # utilize thread from ThreadPoolExecutor
     self.buff_iter = self.buff_iter + 1
@@ -87,16 +92,26 @@ class BafflesList(ComponentsList):
 
   # calculate CBFs and sum for all buffles
   def Calc_CBFs(self,cbf_mu,cbf_t):
-    Bx = 0  # [observed, estimated]
+    self.Bx = 0  # [observed, estimated]
+    self.Blist = {}
     for comp in self.comp_list:
-      Bx = Bx + self.comp_cha_list[comp].Calc_CBF(cbf_mu, cbf_t)
-    return Bx
+      result = self.comp_cha_list[comp].Calc_CBF(cbf_mu, cbf_t)
+      self.Bx = self.Bx + result[0]
+      self.Blist[comp] = result[1]
+    return self.Bx, self.Blist
+
+  def Fetch_Bx(self):
+    return self.Bx
+ 
+  def Fetch_Blist(self):
+    return self.Blist
    
   # create time list data
   def write2df(self,df,row):
     for comp in self.comp_list:
       for i in self.comp_cha_list[comp].bf.keys():
         df.loc[row, self.comp_cha_list[comp].bf[i].caname] =   self.comp_cha_list[comp].bf[i].fetch()
+        df.loc[row, str('Blist:'+i)] = self.Blist[comp][i]
     return df
  
 #####################################################################
@@ -165,6 +180,12 @@ class PSesList(ComponentsList):
       df.loc[row, self.comp_cha_list[comp].aiCnv.caname]  =   self.comp_cha_list[comp].aiCnv.fetch() 
       df.loc[row, self.comp_cha_list[comp].dacCnv.caname] =   self.comp_cha_list[comp].dacCnv.fetch()
     return df
+
+  # check if step value is reflected
+  def check_reflection(self):
+    for comp in self.comp_list:
+      self.comp_cha_list[comp].check_Step_reflection()
+      self.comp_cha_list[comp].check_DAC_reflection()
  
 
 #####################################################################
@@ -195,5 +216,6 @@ class FCsList(ComponentsList):
   def write2df(self,df,row):
     for comp in self.comp_list:
       df.loc[row, self.comp_cha_list[comp].nACur.caname] = self.comp_cha_list[comp].nACur.fetch()
+
     return df
  
