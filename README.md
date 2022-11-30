@@ -27,7 +27,7 @@ Before running the main routine, you are encouranged to save the current input s
 The initial input states wil be stored under `../data/` and can be restored by running `user_pickele.py`. 
 
 
-Editor information
+# Editor information
 
 This documentation and extensions are prepared by H. Fujii, Beam Dynamics and diagnostics team led by N. Fukunisi at Riken Nishina Center. 
 Also affiliated with Dynamics & Control Laboratory led by M. Yamakita at Tokyo Tech.
