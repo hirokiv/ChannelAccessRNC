@@ -26,7 +26,15 @@ Before running the main routine, you are encouranged to save the current input s
 ```
 The initial input states wil be stored under `../data/` and can be restored by running `user_pickele.py`. 
 
-Experimental results reported in 
-H Fujii, A. Scheinker, A. Uchiyama, S.J. Gessner, O. Kamigaito and N. Fukunishi, EXTREMUM SEEKING CONTROL FOR THE OPTIMIZATION OF HEAVY ION BEAM TRANSPORTATION, Proceedings of the 18th Annual Meeting of Particle Accelerator Society of Japan, August 9 - 12, 2021, QST-Takasaki Online, Japan
 
-Contact for the access via hirokifujii9@gmail.com / fujii@ac.ctrl.titech.ac.jp
+Editor information
+
+This documentation and extensions are prepared by H. Fujii, Beam Dynamics and diagnostics team led by N. Fukunisi at Riken Nishina Center. 
+Also affiliated with Dynamics & Control Laboratory led by M. Yamakita at Tokyo Tech.
+
+Email: fujii@ac.ctrl.titech.ac.jp / hirokifujii9@gmail.com
+
+The algorithm employed through the close consultation with A. Scheinker. 
+
+Experimental results reported in 
+H Fujii, A. Scheinker, A. Uchiyama, S.J. Gessner, O. Kamigaito and N. Fukunishi, EXTREMUM SEEKING CONTROL FOR THE OPTIMIZATION OF HEAVY ION BEAM TRANSPORTATION, Proceedings of the 18th Annual Meeting of Particle Accelerator Society of Japan, August 9 - 12, 2021, QST-Takasaki Online, Japan.
