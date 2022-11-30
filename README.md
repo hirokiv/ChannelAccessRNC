@@ -32,7 +32,7 @@ The initial input states wil be stored under `../data/` and can be restored by r
 This documentation and extensions are prepared by H. Fujii, Beam Dynamics and diagnostics team led by N. Fukunisi at Riken Nishina Center. 
 Also affiliated with Dynamics & Control Laboratory led by M. Yamakita at Tokyo Tech.
 
-Email: fujii@ac.ctrl.titech.ac.jp / hirokifujii9@gmail.com
+Email: fujii $at$ ac.ctrl.titech.ac.jp / hirokifujii9 $at$ gmail.com
 
 The algorithm employed through the close consultation with A. Scheinker. 
 
